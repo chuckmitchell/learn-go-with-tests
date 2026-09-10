@@ -1,6 +1,8 @@
 package pointers
 
 import (
+	"errors"
+	"fmt"
 	"testing"
 )
 
@@ -26,6 +28,13 @@ func TestWallet(t *testing.T) {
 
 		assertError(t, err, ErrInsufficientFunds)
 		assertBalance(t, wallet, startingBalance)
+	})
+
+	t.Run("process a withdrawl error", func(t *testing.T) {
+		wallet := Wallet{Bitcoin(10)}
+		err := ProcessWithdrawal(&wallet, "acc-133", Bitcoin(100))
+		fmt.Println(err)
+		assertError(t, err, ErrInsufficientFunds)
 	})
 
 	t.Run("Bitcoin String", func(t *testing.T) {
@@ -55,8 +64,9 @@ func assertError(t testing.TB, got error, want error) {
 		t.Fatal("didn't get an error when we were expecting one")
 	}
 
-	if got != want {
+	if !errors.Is(got, want) {
 		t.Errorf("got %q, want %q", got, want)
+
 	}
 }
 

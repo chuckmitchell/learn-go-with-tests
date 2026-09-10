@@ -31,6 +31,13 @@ func (w *Wallet) Withdraw(amount Bitcoin) error {
 	return nil
 }
 
+func ProcessWithdrawal(wallet *Wallet, accountID string, amount Bitcoin) error {
+	if err := wallet.Withdraw(amount); err != nil {
+		return fmt.Errorf("processing withdrawal for account %s: %w", accountID, err)
+	}
+	return nil
+}
+
 func (w *Wallet) Balance() Bitcoin {
 	return w.balance
 }
