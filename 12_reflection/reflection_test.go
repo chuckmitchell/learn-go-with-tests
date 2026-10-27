@@ -28,6 +28,13 @@ func assertContains(t testing.TB, haystack []string, needle string) {
 	}
 }
 
+func assertLength(t testing.TB, got []string, want int) {
+	t.Helper()
+	if len(got) != want {
+		t.Errorf("got %d values but expected %d", len(got), want)
+	}
+}
+
 func TestWalk(t *testing.T) {
 
 	cases := []struct {
@@ -122,7 +129,46 @@ func TestWalk(t *testing.T) {
 			got = append(got, input)
 		})
 
+		assertLength(t, got, len(aMap))
 		assertContains(t, got, "Moo")
 		assertContains(t, got, "Baaa")
+	})
+
+	t.Run("with channels", func(t *testing.T) {
+		aChannel := make(chan Profile)
+
+		go func() {
+			aChannel <- Profile{33, "Berlin"}
+			aChannel <- Profile{34, "Paris"}
+			close(aChannel)
+		}()
+
+		var got []string
+		want := []string{"Berlin", "Paris"}
+
+		walk(aChannel, func(input string) {
+			got = append(got, input)
+		})
+
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("got %v, wanted %v", got, want)
+		}
+	})
+
+	t.Run("with func", func(t *testing.T) {
+		aFunction := func() (Profile, Profile) {
+			return Profile{33, "Berlin"}, Profile{24, "Krakow"}
+		}
+
+		var got []string
+		want := []string{"Berlin", "Krakow"}
+
+		walk(aFunction, func(input string) {
+			got = append(got, input)
+		})
+
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("got %v, wanted %v", got, want)
+		}
 	})
 }
