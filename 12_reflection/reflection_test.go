@@ -171,4 +171,22 @@ func TestWalk(t *testing.T) {
 			t.Errorf("got %v, wanted %v", got, want)
 		}
 	})
+
+	t.Run("with cycle", func(t *testing.T) {
+		type Person struct {
+			Name   string
+			Friend *Person
+		}
+
+		p := Person{Name: "Alice"}
+		p.Friend = &p // cycle!
+
+		var got []string
+		walk(p, func(input string) {
+			got = append(got, input)
+		})
+
+		assertLength(t, got, 2)
+		assertContains(t, got, "Alice")
+	})
 }

@@ -3,10 +3,12 @@ package reflection
 import "reflect"
 
 func walk(x interface{}, fn func(input string)) {
-	val := getValue(x)
+	walkWithSeen(reflect.ValueOf(x), fn, make(map[uintptr]struct{}))
+}
 
+func walkWithSeen(val reflect.Value, fn func(input string), seen map[uintptr]struct{}) {
 	walkValue := func(value reflect.Value) {
-		walk(value.Interface(), fn)
+		walkWithSeen(value, fn, seen)
 	}
 
 	switch val.Kind() {
@@ -22,12 +24,12 @@ func walk(x interface{}, fn func(input string)) {
 		}
 	case reflect.Map:
 		for _, key := range val.MapKeys() {
-			walk(val.MapIndex(key).Interface(), fn)
+			walkWithSeen(val.MapIndex(key), fn, seen)
 		}
 	case reflect.Chan:
 		for {
 			if v, ok := val.Recv(); ok {
-				walkValue(v)
+				walkWithSeen(v, fn, seen)
 			} else {
 				break
 			}
@@ -35,16 +37,17 @@ func walk(x interface{}, fn func(input string)) {
 	case reflect.Func:
 		valFnResult := val.Call(nil)
 		for _, res := range valFnResult {
-			walkValue(res)
+			walkWithSeen(res, fn, seen)
+		}
+	case reflect.Ptr:
+		if !val.IsNil() {
+			ptrAddr := val.Pointer() // address the pointer points to
+			if _, ok := seen[ptrAddr]; ok {
+				return // cycle detected
+			}
+			seen[ptrAddr] = struct{}{}
+			defer delete(seen, ptrAddr)
+			walkValue(val.Elem())
 		}
 	}
-}
-
-func getValue(x interface{}) reflect.Value {
-	val := reflect.ValueOf(x)
-
-	if val.Kind() == reflect.Pointer {
-		val = val.Elem()
-	}
-	return val
 }
